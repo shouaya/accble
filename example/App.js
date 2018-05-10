@@ -231,12 +231,14 @@ export default class App extends Component {
             enableEmptySections={true}
             dataSource={dataSource}
             renderRow={(item) => {
+              console.log(item)
               const color = item.connected ? 'green' : '#fff';
               return (
                 <TouchableHighlight onPress={() => this.test(item) }>
                   <View style={[styles.row, {backgroundColor: color}]}>
                     <Text style={{fontSize: 12, textAlign: 'center', color: '#333333', padding: 10}}>{item.name}</Text>
                     <Text style={{fontSize: 8, textAlign: 'center', color: '#333333', padding: 10}}>{item.id}</Text>
+                    <Text style={{fontSize: 12, textAlign: 'center', color: '#333333', padding: 10}}>{JSON.stringify(item)}</Text>
                   </View>
                 </TouchableHighlight>
               );
