@@ -159,12 +159,14 @@ export default class App extends Component {
             renderRow={(item) => {
               console.log(item)
               const color = item.connected ? 'green' : '#fff';
+              let base64data = item.advertising.kCBAdvDataServiceData.FFE1.data
+              //
               return (
                 <TouchableHighlight>
                   <View style={[styles.row, { backgroundColor: color }]}>
                     <Text style={{ fontSize: 12, textAlign: 'center', color: '#333333', padding: 10 }}>{item.name}</Text>
                     <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>{item.id}</Text>
-                    <Text style={{ fontSize: 12, textAlign: 'center', color: '#333333', padding: 10 }}>{JSON.stringify(item)}</Text>
+                    <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>{buff}</Text>
                   </View>
                 </TouchableHighlight>
               );
