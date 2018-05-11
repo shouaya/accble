@@ -17,6 +17,7 @@ import {
   TextInput
 } from 'react-native';
 import BleManager from 'react-native-ble-manager';
+import { base64ToHex16arrStr, getxyzpr } from './lib/bletools'
 
 const window = Dimensions.get('window');
 const ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 });
@@ -31,7 +32,7 @@ export default class App extends Component {
     this.state = {
       scanning: false,
       peripherals: new Map(),
-      blename:'',
+      blename: '',
       appState: ''
     }
 
@@ -96,11 +97,11 @@ export default class App extends Component {
       this.setState({ scanning: true });
       this.intervalId = setInterval(() => {
         //this.setState({ peripherals: new Map(), scanning: true });
-        BleManager.scan([], 0.5, true).then((results) => {
+        BleManager.scan([], 0.1, true).then((results) => {
           console.log('Scanning...');
           // this.setState({ scanning: true });
         });
-      }, 500);
+      }, 100);
     } else {
       clearInterval(this.intervalId)
       this.setState({ scanning: false });
@@ -122,7 +123,7 @@ export default class App extends Component {
 
   handleDiscoverPeripheral(peripheral) {
     var peripherals = this.state.peripherals;
-    if(peripheral.name === this.state.blename){
+    if (peripheral.name === this.state.blename) {
       console.log('Got ble peripheral', peripheral);
       peripherals.set(peripheral.id, peripheral);
       this.setState({ peripherals })
@@ -134,7 +135,7 @@ export default class App extends Component {
     const dataSource = ds.cloneWithRows(list);
     return (
       <View style={styles.container}>
-      <TouchableHighlight style={{ marginTop: 40, margin: 20, padding: 20, backgroundColor: '#ccc' }}>
+        <TouchableHighlight style={{ marginTop: 40, margin: 20, padding: 20, backgroundColor: '#ccc' }}>
           <TextInput
             style={{ height: 40, borderColor: 'gray', borderWidth: 1 }}
             onChangeText={(blename) => this.setState({ blename })}
@@ -157,16 +158,22 @@ export default class App extends Component {
             enableEmptySections={true}
             dataSource={dataSource}
             renderRow={(item) => {
-              console.log(item)
+              // console.log(item)
               const color = item.connected ? 'green' : '#fff';
               let base64data = item.advertising.kCBAdvDataServiceData.FFE1.data
-              //
+              let hex16 = base64ToHex16arrStr(base64data)
+              let [x, y, z, pitch, roll] = getxyzpr(hex16)
               return (
                 <TouchableHighlight>
                   <View style={[styles.row, { backgroundColor: color }]}>
                     <Text style={{ fontSize: 12, textAlign: 'center', color: '#333333', padding: 10 }}>{item.name}</Text>
                     <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>{item.id}</Text>
-                    <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>{buff}</Text>
+                    <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>{hex16}</Text>
+                    <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>pitch: {pitch}</Text>
+                    <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>roll: {roll}</Text>
+                    <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>x: {x}g</Text>
+                    <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>y: {y}g</Text>
+                    <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>z: {z}g</Text>
                   </View>
                 </TouchableHighlight>
               );
