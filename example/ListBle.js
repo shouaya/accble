@@ -17,7 +17,6 @@ import {
 import ItemBle from './ItemBle'
 
 import BleManager from 'react-native-ble-manager';
-import { base64ToHex16arrStr, getxyzpr } from './lib/bletools'
 const window = Dimensions.get('window');
 const ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 });
 
@@ -121,7 +120,7 @@ export default class ListBle extends Component {
         const dataSource = ds.cloneWithRows(list);
         return (
             <View style={styles.container}>
-                <TouchableHighlight style={{ marginTop: 80, margin: 20, padding: 20, backgroundColor: '#ccc' }} onPress={() => this.startScan()}>
+                <TouchableHighlight style={{ marginTop: 80, margin: 20, padding: 20, backgroundColor: '#ccc' }} onPress={() => this.viewDetail({id:'test',name:'test'})}>
                     <Text>Scan Bluetooth ({this.state.scanning ? 'on' : 'off'})</Text>
                 </TouchableHighlight>
                 <ScrollView style={styles.scroll}>

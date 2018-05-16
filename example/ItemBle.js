@@ -1,25 +1,18 @@
 import React, { Component } from 'react';
 import {
   AppRegistry,
-  StyleSheet,
   Text,
   View,
   TouchableHighlight,
-  NativeAppEventEmitter,
   NativeEventEmitter,
   NativeModules,
   Platform,
-  PermissionsAndroid,
-  ListView,
-  ScrollView,
   AppState,
   Dimensions,
-  TextInput
+  ART
 } from 'react-native';
 import BleManager from 'react-native-ble-manager';
 import { base64ToHex16arrStr, getxyzpr } from './lib/bletools'
-const window = Dimensions.get('window');
-const ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 });
 
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
@@ -92,17 +85,17 @@ export default class ItemBle extends Component {
 
   startScan() {
     if (!this.state.scanning) {
-      this.setState({peripherals: new Map()});
+      this.setState({ peripherals: new Map() });
       BleManager.scan([], 3, true).then((results) => {
         console.log('Scanning...');
-        this.setState({scanning:true});
+        this.setState({ scanning: true });
       });
     }
   }
 
   handleDiscoverPeripheral(peripheral) {
     var peripherals = this.state.peripherals;
-    if (!peripherals.has(peripheral.id)){
+    if (!peripherals.has(peripheral.id)) {
       console.log('Got ble peripheral', peripheral);
       peripherals.set(peripheral.id, peripheral);
       this.setState({ peripherals })
@@ -110,57 +103,20 @@ export default class ItemBle extends Component {
   }
 
   render() {
-    const list = Array.from(this.state.peripherals.values())
-    const dataSource = ds.cloneWithRows(list);
+    const {Surface, Shape, Path} = ART
+
+    const path = new Path()
+            .moveTo(50,1)
+            .arc(0,99,25)
+            .arc(0,-99,25)
+            .close();
+
     return (
-      <View style={styles.container}>
-        <TouchableHighlight style={{ marginTop: 40, margin: 20, padding: 20, backgroundColor: '#ccc' }} onPress={() => this.startScan()}>
-          <Text>Scan Bluetooth ({this.state.scanning ? 'on' : 'off'})</Text>
-        </TouchableHighlight>
-        <ScrollView style={styles.scroll}>
-          {(list.length == 0) &&
-            <View style={{ flex: 1, margin: 20 }}>
-              <Text style={{ textAlign: 'center' }}>No peripherals</Text>
-            </View>
-          }
-          <ListView
-            enableEmptySections={true}
-            dataSource={dataSource}
-            renderRow={(item) => {
-              // console.log(item)
-              const color = item.connected ? 'green' : '#fff';
-              // let base64data = item.advertising.kCBAdvDataServiceData.FFE1.data
-              // let hex16 = base64ToHex16arrStr(base64data)
-              // let [x, y, z, pitch, roll] = getxyzpr(hex16)
-              return (
-                <TouchableHighlight onPress={() => this.retrieveConnected()}>
-                  <View style={[styles.row, { backgroundColor: color }]}>
-                    <Text style={{ fontSize: 12, textAlign: 'center', color: '#333333', padding: 10 }}>{item.name}</Text>
-                    <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>{item.id}</Text>
-                  </View>
-                </TouchableHighlight>
-              );
-            }}
-          />
-        </ScrollView>
+      <View style={{ marginTop: 80, margin: 20, padding: 20, backgroundColor: '#ccc' }}>
+        <Surface width={100} height={100}>
+                    <Shape d={path} stroke="#000000" strokeWidth={1}/>
+                </Surface>
       </View>
-    );
+    )
   }
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFF',
-    width: window.width,
-    height: window.height
-  },
-  scroll: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-    margin: 10,
-  },
-  row: {
-    margin: 10
-  },
-});
