@@ -63,8 +63,7 @@ function CharToHex(str) {
     i = 0;
     while (i < str.length) {
         h = str.charCodeAt(i++).toString(16);
-        out += "" + h;
-        out += ", ";
+        out += ('00' + h).slice(-2)
     }
     return out;
 }
@@ -74,17 +73,13 @@ export function base64ToHex16arrStr(encodebase64) {
 }
 
 function fixnum(left, right) {
-    if (left === "0") {
-        console.log("0")
+    if (left === "00") {
         return parseInt(right, 16) / 256
-    } else if (left === "1") {
-        console.log("1")
+    } else if (left === "01") {
         return (parseInt(right, 16) / 256) + 1
     } else if (left === "ff") {
-        console.log("ff")
         return (parseInt(right, 16) / 256) - 1
     } else if (left === "fe") {
-        console.log("fe")
         return (parseInt(right, 16) / 256) * -1
     } else {
         console.log("other", left)
@@ -93,8 +88,7 @@ function fixnum(left, right) {
 }
 
 export function getxyzpr(hex16) {
-    let arr = hex16.split(",")
-    let [x, y, z] = [fixnum(arr[3].trim(), arr[4].trim()), fixnum(arr[5].trim(), arr[6].trim()), fixnum(arr[7].trim(), arr[8].trim())]
+    let [x, y, z] = [fixnum(hex16.substr(6, 2), hex16.substr(8, 2)), fixnum(hex16.substr(10, 2), hex16.substr(12, 2)), fixnum(hex16.substr(14, 2), hex16.substr(16, 2))]
     let pitch = Math.atan2(y, z) * 180 / Math.PI
     let roll = Math.atan2(-x, Math.sqrt(y * y + z * z)) * 180 / Math.PI
     return [x, y, z, pitch, roll]

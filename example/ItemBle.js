@@ -7,7 +7,6 @@ import {
   NativeEventEmitter,
   NativeModules,
   Platform,
-  AppState,
   Dimensions,
   ART
 } from 'react-native';
@@ -23,59 +22,32 @@ export default class ItemBle extends Component {
 
     this.state = {
       scanning: false,
-      peripherals: new Map(),
-      appState: ''
+      peripheral: null,
     }
 
     this.handleDiscoverPeripheral = this.handleDiscoverPeripheral.bind(this);
     this.handleStopScan = this.handleStopScan.bind(this);
-    this.handleUpdateValueForCharacteristic = this.handleUpdateValueForCharacteristic.bind(this);
-    this.handleDisconnectedPeripheral = this.handleDisconnectedPeripheral.bind(this);
-    this.handleAppStateChange = this.handleAppStateChange.bind(this);
   }
 
   componentDidMount() {
-    AppState.addEventListener('change', this.handleAppStateChange);
-
     BleManager.start({ showAlert: false });
 
     this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral);
     this.handlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.handleStopScan);
-    this.handlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.handleDisconnectedPeripheral);
-    this.handlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.handleUpdateValueForCharacteristic);
 
-  }
-
-  handleAppStateChange(nextAppState) {
-    if (this.state.appState.match(/inactive|background/) && nextAppState === 'active') {
-      console.log('App has come to the foreground!')
-      BleManager.getConnectedPeripherals([]).then((peripheralsArray) => {
-        console.log('Connected peripherals: ' + peripheralsArray.length);
+    this.intervalId = setInterval(() => {
+      //this.setState({ peripherals: new Map(), scanning: true });
+      BleManager.scan(this.props.route.item.advertising.kCBAdvDataServiceUUIDs, 3, true).then((results) => {
+        console.log('Scanning...');
+        // this.setState({ scanning: true });
       });
-    }
-    this.setState({ appState: nextAppState });
+    }, 1000);
   }
 
   componentWillUnmount() {
     this.handlerDiscover.remove();
     this.handlerStop.remove();
-    this.handlerDisconnect.remove();
-    this.handlerUpdate.remove();
-  }
-
-  handleDisconnectedPeripheral(data) {
-    let peripherals = this.state.peripherals;
-    let peripheral = peripherals.get(data.peripheral);
-    if (peripheral) {
-      peripheral.connected = false;
-      peripherals.set(peripheral.id, peripheral);
-      this.setState({ peripherals });
-    }
-    console.log('Disconnected from ' + data.peripheral);
-  }
-
-  handleUpdateValueForCharacteristic(data) {
-    console.log('Received data from ' + data.peripheral + ' characteristic ' + data.characteristic, data.value);
+    clearInterval(this.intervalId)
   }
 
   handleStopScan() {
@@ -83,39 +55,38 @@ export default class ItemBle extends Component {
     this.setState({ scanning: false });
   }
 
-  startScan() {
-    if (!this.state.scanning) {
-      this.setState({ peripherals: new Map() });
-      BleManager.scan([], 3, true).then((results) => {
-        console.log('Scanning...');
-        this.setState({ scanning: true });
-      });
-    }
-  }
-
   handleDiscoverPeripheral(peripheral) {
-    var peripherals = this.state.peripherals;
-    if (!peripherals.has(peripheral.id)) {
-      console.log('Got ble peripheral', peripheral);
-      peripherals.set(peripheral.id, peripheral);
-      this.setState({ peripherals })
+    console.log('handleDiscoverPeripheral', peripheral)
+    if (peripheral && peripheral.id === this.props.route.item.id) {
+      this.setState({
+        peripheral: peripheral
+      })
     }
   }
 
   render() {
-    const {Surface, Shape, Path} = ART
+    let data = ""
+    if (this.state.peripheral != null) {
+      const peripheral = this.state.peripheral
+      const suuid = this.props.route.item.advertising.kCBAdvDataServiceUUIDs[0]
+      base64data = peripheral.advertising.kCBAdvDataServiceData[suuid].data
+      let hex16 = base64ToHex16arrStr(base64data)
+      let [x, y, z, pitch, roll] = getxyzpr(hex16)
+      data = " x:" + x.toFixed(2) + " y:" + y.toFixed(2) + " z:" + z.toFixed(2) + " p:" + pitch.toFixed(2)
+    }
 
+    const { Surface, Shape, Path } = ART
     const path = new Path()
-            .moveTo(50,1)
-            .arc(0,99,25)
-            .arc(0,-99,25)
-            .close();
-
+      .moveTo(50, 1)
+      .arc(0, 99, 25)
+      .arc(0, -99, 25)
+      .close();
     return (
       <View style={{ marginTop: 80, margin: 20, padding: 20, backgroundColor: '#ccc' }}>
+        <Text style={{ textAlign: 'center' }}>{data}</Text>
         <Surface width={100} height={100}>
-                    <Shape d={path} stroke="#000000" strokeWidth={1}/>
-                </Surface>
+          <Shape d={path} stroke="#000000" strokeWidth={1} />
+        </Surface>
       </View>
     )
   }

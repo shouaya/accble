@@ -10,13 +10,14 @@ import {
     NativeModules,
     ListView,
     ScrollView,
-    AppState,
     Dimensions
 } from 'react-native';
-
+import { base64ToHex16arrStr, getxyzpr } from './lib/bletools'
 import ItemBle from './ItemBle'
 
 import BleManager from 'react-native-ble-manager';
+import Toast, { DURATION } from 'react-native-easy-toast'
+
 const window = Dimensions.get('window');
 const ds = new ListView.DataSource({ rowHasChanged: (r1, r2) => r1 !== r2 });
 
@@ -30,58 +31,21 @@ export default class ListBle extends Component {
         this.state = {
             scanning: false,
             peripherals: new Map(),
-            appState: ''
         }
 
         this.handleDiscoverPeripheral = this.handleDiscoverPeripheral.bind(this);
         this.handleStopScan = this.handleStopScan.bind(this);
-        this.handleUpdateValueForCharacteristic = this.handleUpdateValueForCharacteristic.bind(this);
-        this.handleDisconnectedPeripheral = this.handleDisconnectedPeripheral.bind(this);
-        this.handleAppStateChange = this.handleAppStateChange.bind(this);
     }
 
     componentDidMount() {
-        AppState.addEventListener('change', this.handleAppStateChange);
-
-        BleManager.start({ showAlert: false });
-
+        BleManager.start({ showAlert: false })
         this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral);
         this.handlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.handleStopScan);
-        this.handlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.handleDisconnectedPeripheral);
-        this.handlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.handleUpdateValueForCharacteristic);
-
-    }
-
-    handleAppStateChange(nextAppState) {
-        if (this.state.appState.match(/inactive|background/) && nextAppState === 'active') {
-            console.log('App has come to the foreground!')
-            BleManager.getConnectedPeripherals([]).then((peripheralsArray) => {
-                console.log('Connected peripherals: ' + peripheralsArray.length);
-            });
-        }
-        this.setState({ appState: nextAppState });
     }
 
     componentWillUnmount() {
         this.handlerDiscover.remove();
         this.handlerStop.remove();
-        this.handlerDisconnect.remove();
-        this.handlerUpdate.remove();
-    }
-
-    handleDisconnectedPeripheral(data) {
-        let peripherals = this.state.peripherals;
-        let peripheral = peripherals.get(data.peripheral);
-        if (peripheral) {
-            peripheral.connected = false;
-            peripherals.set(peripheral.id, peripheral);
-            this.setState({ peripherals });
-        }
-        console.log('Disconnected from ' + data.peripheral);
-    }
-
-    handleUpdateValueForCharacteristic(data) {
-        console.log('Received data from ' + data.peripheral + ' characteristic ' + data.characteristic, data.value);
     }
 
     handleStopScan() {
@@ -102,16 +66,30 @@ export default class ListBle extends Component {
     handleDiscoverPeripheral(peripheral) {
         var peripherals = this.state.peripherals;
         if (!peripherals.has(peripheral.id)) {
-            console.log('Got ble peripheral', peripheral);
+            // console.log('Got ble peripheral', peripheral);
             peripherals.set(peripheral.id, peripheral);
             this.setState({ peripherals })
         }
     }
 
     viewDetail(item) {
+        if (!item.advertising) {
+            this.refs.toast.show('not effective beacon', DURATION.LENGTH_LONG);
+            return
+        }
+        if (!item.advertising.kCBAdvDataServiceData) {
+            this.refs.toast.show('not effective beacon', DURATION.LENGTH_LONG);
+            return
+        }
+        if (item.advertising.kCBAdvDataServiceData.length === 0) {
+            this.refs.toast.show('not effective beacon', DURATION.LENGTH_LONG);
+            return
+        }
+
         this.props.navigator.push({
             component: ItemBle,
             title: item.name,
+            item: item
         });
     }
 
@@ -120,29 +98,40 @@ export default class ListBle extends Component {
         const dataSource = ds.cloneWithRows(list);
         return (
             <View style={styles.container}>
-                <TouchableHighlight style={{ marginTop: 80, margin: 20, padding: 20, backgroundColor: '#ccc' }} onPress={() => this.viewDetail({id:'test',name:'test'})}>
+                <Toast ref="toast" position='top' positionValue={200} />
+                <TouchableHighlight style={{ marginTop: 80, margin: 20, padding: 20, backgroundColor: '#ccc' }} onPress={() => this.startScan()}>
                     <Text>Scan Bluetooth ({this.state.scanning ? 'on' : 'off'})</Text>
                 </TouchableHighlight>
                 <ScrollView style={styles.scroll}>
                     {(list.length == 0) &&
                         <View style={{ flex: 1, margin: 20 }}>
-                            <Text style={{ textAlign: 'center' }}>No peripherals</Text>
+                            <Text style={{ textAlign: 'center' }}>No peripherals or Bluetooth is not enable ?</Text>
                         </View>
                     }
                     <ListView
                         enableEmptySections={true}
                         dataSource={dataSource}
                         renderRow={(item) => {
-                            // console.log(item)
                             const color = item.connected ? 'green' : '#fff';
-                            // let base64data = item.advertising.kCBAdvDataServiceData.FFE1.data
-                            // let hex16 = base64ToHex16arrStr(base64data)
-                            // let [x, y, z, pitch, roll] = getxyzpr(hex16)
+                            let mac = ""
+                            if(item.advertising){
+                                if(item.advertising.kCBAdvDataServiceUUIDs && item.advertising.kCBAdvDataServiceUUIDs.length > 0){
+                                    let suuid = item.advertising.kCBAdvDataServiceUUIDs[0]
+                                    if(item.advertising.kCBAdvDataServiceData && item.advertising.kCBAdvDataServiceData[suuid]){
+                                        let base64data = item.advertising.kCBAdvDataServiceData[suuid].data
+                                        let hex16 = base64ToHex16arrStr(base64data)
+                                        //a1, 3, 64, 0, 2, 0, 2, 1, 2, 25, 6, a0, 3f, 23, ac, 
+                                        //a1 03 64 00 02 00 02 01 02 25 06 a0 3f 23 ac
+                                        mac = hex16.substring(18)
+                                    }
+                                }
+                            }
                             return (
                                 <TouchableHighlight onPress={() => this.viewDetail(item)}>
                                     <View style={[styles.row, { backgroundColor: color }]}>
-                                        <Text style={{ fontSize: 12, textAlign: 'center', color: '#333333', padding: 10 }}>{item.name}</Text>
-                                        <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 10 }}>{item.id}</Text>
+                                        <Text style={{ fontSize: 12, textAlign: 'center', color: '#333333', padding: 5 }}>{item.name}</Text>
+                                        <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 5 }}>UUID:{item.id}</Text>
+                                        <Text style={{ fontSize: 8, textAlign: 'center', color: '#333333', padding: 5 }}>MAC:{mac}</Text>
                                     </View>
                                 </TouchableHighlight>
                             );
