@@ -1,17 +1,13 @@
 import React, { Component } from 'react';
 import {
-  AppRegistry,
   Text,
   View,
-  TouchableHighlight,
   NativeEventEmitter,
   NativeModules,
-  Platform,
-  Dimensions,
-  ART
 } from 'react-native';
 import BleManager from 'react-native-ble-manager';
 import { base64ToHex16arrStr, getxyzpr } from './lib/bletools'
+import CircleBle from './CircleBle'
 
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
@@ -56,7 +52,7 @@ export default class ItemBle extends Component {
   }
 
   handleDiscoverPeripheral(peripheral) {
-    console.log('handleDiscoverPeripheral', peripheral)
+    // console.log('handleDiscoverPeripheral', peripheral)
     if (peripheral && peripheral.id === this.props.route.item.id) {
       this.setState({
         peripheral: peripheral
@@ -65,29 +61,16 @@ export default class ItemBle extends Component {
   }
 
   render() {
-    let data = ""
+    let data = [0, 0, 1, 0, 0]
     if (this.state.peripheral != null) {
       const peripheral = this.state.peripheral
       const suuid = this.props.route.item.advertising.kCBAdvDataServiceUUIDs[0]
       base64data = peripheral.advertising.kCBAdvDataServiceData[suuid].data
       let hex16 = base64ToHex16arrStr(base64data)
-      let [x, y, z, pitch, roll] = getxyzpr(hex16)
-      data = " x:" + x.toFixed(2) + " y:" + y.toFixed(2) + " z:" + z.toFixed(2) + " p:" + pitch.toFixed(2)
+      data = getxyzpr(hex16)
     }
-
-    const { Surface, Shape, Path } = ART
-    const path = new Path()
-      .moveTo(50, 1)
-      .arc(0, 99, 25)
-      .arc(0, -99, 25)
-      .close();
     return (
-      <View style={{ marginTop: 80, margin: 20, padding: 20, backgroundColor: '#ccc' }}>
-        <Text style={{ textAlign: 'center' }}>{data}</Text>
-        <Surface width={100} height={100}>
-          <Shape d={path} stroke="#000000" strokeWidth={1} />
-        </Surface>
-      </View>
+      <CircleBle data={data} />
     )
   }
 }
