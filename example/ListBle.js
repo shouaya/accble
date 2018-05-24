@@ -71,6 +71,7 @@ export default class ListBle extends Component {
     }
 
     viewDetail(item) {
+        console.log(item)
         if (!item.advertising) {
             this.refs.toast.show('not effective beacon', DURATION.LENGTH_LONG);
             return
@@ -83,7 +84,6 @@ export default class ListBle extends Component {
             this.refs.toast.show('not effective beacon', DURATION.LENGTH_LONG);
             return
         }
-
         this.props.navigator.push({
             component: ItemBle,
             title: item.name,
@@ -121,6 +121,14 @@ export default class ListBle extends Component {
                                         //a1, 3, 64, 0, 2, 0, 2, 1, 2, 25, 6, a0, 3f, 23, ac, 
                                         //a1 03 64 00 02 00 02 01 02 25 06 a0 3f 23 ac
                                         mac = hex16.substring(18)
+                                    }
+                                }else if(item.advertising.kCBAdvDataServiceData){
+                                    let keys = Object.keys(item.advertising.kCBAdvDataServiceData)
+                                    if(keys && keys.length > 0){
+                                        let key = keys[0]
+                                        let base64data = item.advertising.kCBAdvDataServiceData[key].data
+                                        let hex16 = base64ToHex16arrStr(base64data)
+                                        console.log("ibeacon ", hex16)
                                     }
                                 }
                             }
